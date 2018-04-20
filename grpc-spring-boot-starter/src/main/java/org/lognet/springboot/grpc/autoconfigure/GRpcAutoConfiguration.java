@@ -2,6 +2,7 @@ package org.lognet.springboot.grpc.autoconfigure;
 
 import io.grpc.ServerBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
+import io.grpc.netty.NettyServerBuilder;
 import io.grpc.services.HealthStatusManager;
 import org.lognet.springboot.grpc.GRpcServerBuilderConfigurer;
 import org.lognet.springboot.grpc.GRpcServerRunner;
@@ -14,15 +15,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.env.MapPropertySource;
-import org.springframework.core.env.MutablePropertySources;
-import org.springframework.core.env.PropertySource;
-import org.springframework.util.SocketUtils;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 /**
  * Created by alexf on 25-Jan-16.
@@ -39,15 +35,26 @@ public class GRpcAutoConfiguration {
     @Autowired
     private GRpcServerProperties grpcServerProperties;
 
-
+    /**
+     * Support binding the netty server on a specific bind address.
+     */
+    @Bean(name = "grpcServerRunner")
+    @ConditionalOnExpression("#{environment.getProperty('grpc.nettyBindAddress','')!=''}")
+    public GRpcServerRunner grpcServerRunnerWithNettyBindAddress(GRpcServerBuilderConfigurer configurer) {
+        SocketAddress addr = new InetSocketAddress(grpcServerProperties.getNettyBindAddress(), grpcServerProperties.getPort());
+        ServerBuilder builder = NettyServerBuilder.forAddress(addr);
+        return new GRpcServerRunner(configurer, builder);
+    }
 
     @Bean
+    @ConditionalOnMissingBean(GRpcServerRunner.class)
     @ConditionalOnProperty(value = "grpc.enabled", havingValue = "true", matchIfMissing = true)
     public GRpcServerRunner grpcServerRunner(GRpcServerBuilderConfigurer configurer) {
         return new GRpcServerRunner(configurer, ServerBuilder.forPort(grpcServerProperties.getPort()));
     }
 
     @Bean
+    @ConditionalOnMissingBean(GRpcServerRunner.class)
     @ConditionalOnExpression("#{environment.getProperty('grpc.inProcessServerName','')!=''}")
     public GRpcServerRunner grpcInprocessServerRunner(GRpcServerBuilderConfigurer configurer){
         return new GRpcServerRunner(configurer, InProcessServerBuilder.forName(grpcServerProperties.getInProcessServerName()));

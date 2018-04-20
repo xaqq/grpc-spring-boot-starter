@@ -25,6 +25,13 @@ public class GRpcServerProperties {
      */
     private boolean enabled = true;
 
+    /**
+     * The bind address, to bind the Netty server. The port is configured
+     * with the `port` attribute.
+     *
+     * If this value is not empty, grpc will be started using the Netty server.
+     */
+    private String nettyBindAddress;
 
     /**
      * In process server name.
